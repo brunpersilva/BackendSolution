@@ -57,28 +57,37 @@ namespace Backend.Controllers
 
 
             int skip = (pageinfo.PaginaAtual - 1) * pageinfo.ItensPorPagina;
-            var produtos = await _context.Produtos
-                                .Where(x => x.Id > (pageinfo.Filtros.FiltroId > 0 ? pageinfo.Filtros.FiltroId - 1 : -1))
-                                .Where(x => x.Id < (pageinfo.Filtros.FiltroId > 0 ? pageinfo.Filtros.FiltroId + 1 : 1000))
+
+            var produtos = new List<Produto>();
+
+            if (pageinfo.Filtros.FiltroId <= 0)
+            {
+                produtos = await _context.Produtos                                
                                 .Where(x => x.Nome.Contains(pageinfo.Filtros.FiltroNome ?? ""))
-                                .OrderBy(p => p.Id)
-                                .Skip(skip)
-                                .Take(pageinfo.ItensPorPagina)
+                                .OrderBy(p => p.Id)                                
                                 .ToListAsync();
+            }
+            else
+            {
+                produtos = await _context.Produtos.ToListAsync();
+            }
 
-            int total = produtos.Count();
+            int totalitens = produtos.Count();
+            int totalPaginas = totalitens / pageinfo.ItensPorPagina;
 
-            return Ok(new 
-            {       
-                Data = produtos, 
-                Paginação = new 
-                { 
-                    PaginaAtaul = pageinfo.PaginaAtual, 
-                    ItensPorPagina = pageinfo.ItensPorPagina, 
-                    TotalPaginas = total 
+            produtos = produtos.Skip(skip).Take(pageinfo.ItensPorPagina).ToList();
 
-                 } 
-            });
+            return Ok(new
+            {
+                Data = produtos,
+                Paginação = new
+                {
+                    PaginaAtual = pageinfo.PaginaAtual,
+                    TotalItems = totalitens,
+                    TotalPaginas = totalPaginas
+
+                }
+            }); ;
         }
 
         // DELETE: api/Produtos/5
