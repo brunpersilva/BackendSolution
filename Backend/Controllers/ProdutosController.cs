@@ -44,11 +44,41 @@ namespace Backend.Controllers
 
         // POST: api/Produtos
         [HttpPost]
-        public async Task<ActionResult<IEnumerable<Produto>>> PostProduto(int id, string nome, int ItensPorPagina, int paginaAtual)
-        {            
-            var ou = await _context.Produtos.OrderBy(p => p.Id).Skip(paginaAtual).Take(ItensPorPagina).ToListAsync();
+        public async Task<ActionResult<IEnumerable<Produto>>> PostProduto(PagingInfo pageinfo)
+        {
+            if (pageinfo.PaginaAtual == 0)
+            {
+                pageinfo.PaginaAtual = 1;
+            }
+            if (pageinfo.ItensPorPagina == 0)
+            {
+                pageinfo.ItensPorPagina = 10;
+            }
 
-            return ou;
+
+            int skip = (pageinfo.PaginaAtual - 1) * pageinfo.ItensPorPagina;
+            var produtos = await _context.Produtos
+                                .Where(x => x.Id > (pageinfo.Filtros.FiltroId > 0 ? pageinfo.Filtros.FiltroId - 1 : -1))
+                                .Where(x => x.Id < (pageinfo.Filtros.FiltroId > 0 ? pageinfo.Filtros.FiltroId + 1 : 1000))
+                                .Where(x => x.Nome.Contains(pageinfo.Filtros.FiltroNome ?? ""))
+                                .OrderBy(p => p.Id)
+                                .Skip(skip)
+                                .Take(pageinfo.ItensPorPagina)
+                                .ToListAsync();
+
+            int total = produtos.Count();
+
+            return Ok(new 
+            {       
+                Data = produtos, 
+                Paginação = new 
+                { 
+                    PaginaAtaul = pageinfo.PaginaAtual, 
+                    ItensPorPagina = pageinfo.ItensPorPagina, 
+                    TotalPaginas = total 
+
+                 } 
+            });
         }
 
         // DELETE: api/Produtos/5
@@ -71,5 +101,7 @@ namespace Backend.Controllers
         {
             return _context.Produtos.Any(e => e.Id == id);
         }
+
     }
+
 }
