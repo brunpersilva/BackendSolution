@@ -50,7 +50,9 @@ namespace Backend
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Produtos}/{action=Index}/{id?}");
             });
         }
     }

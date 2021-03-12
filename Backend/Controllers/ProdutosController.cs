@@ -24,12 +24,13 @@ namespace Backend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
         {
-            return await _context.Produtos.ToListAsync();
+            var output = await _context.Produtos.ToListAsync();
+            return output;
         }
 
         // GET: api/Produtos/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Produto>> GetProduto(long id)
+        public async Task<ActionResult<Produto>> GetProduto(int id)
         {
             var produto = await _context.Produtos.FindAsync(id);
 
@@ -41,48 +42,13 @@ namespace Backend.Controllers
             return produto;
         }
 
-        // PUT: api/Produtos/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutProduto(long id, Produto produto)
-        {
-            if (id != produto.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(produto).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProdutoExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
         // POST: api/Produtos
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Produto>> PostProduto(Produto produto)
-        {
-            _context.Produtos.Add(produto);
-            await _context.SaveChangesAsync();
+        public async Task<ActionResult<IEnumerable<Produto>>> PostProduto(int id, string nome, int ItensPorPagina, int paginaAtual)
+        {            
+            var ou = await _context.Produtos.OrderBy(p => p.Id).Skip(paginaAtual).Take(ItensPorPagina).ToListAsync();
 
-            return CreatedAtAction(nameof(GetProduto), new { id = produto.Id }, produto);
+            return ou;
         }
 
         // DELETE: api/Produtos/5
@@ -101,7 +67,7 @@ namespace Backend.Controllers
             return produto;
         }
 
-        private bool ProdutoExists(long id)
+        private bool ProdutoExists(int id)
         {
             return _context.Produtos.Any(e => e.Id == id);
         }
