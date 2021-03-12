@@ -10,5 +10,6 @@ namespace Backend.Models
         public int Id { get; set; }
         public string Nome { get; set; }
         public decimal Preco { get; set; }
+        //public DateTimeOffset Data { get; set; }
     }
 }

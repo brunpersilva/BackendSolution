@@ -20,13 +20,13 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // GET: api/Produtos
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
-        {
-            var output = await _context.Produtos.ToListAsync();
-            return output;
-        }
+        //// GET: api/Produtos
+        //[HttpGet]
+        //public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
+        //{
+        //    var output = await _context.Produtos.ToListAsync();
+        //    return output;
+        //}
 
         // GET: api/Produtos/5
         [HttpGet("{id}")]
@@ -44,27 +44,27 @@ namespace Backend.Controllers
 
         // POST: api/Produtos
         [HttpPost]
-        public async Task<ActionResult<IEnumerable<Produto>>> PostProduto(PagingInfo pageinfo)
+        public async Task<ActionResult<IEnumerable<Produto>>> PostProduto(RequisicaoBuscaProdutosModel paginacao)
         {
-            if (pageinfo.PaginaAtual == 0)
+            if (paginacao.PaginaRequisicao.PaginaAtual == 0)
             {
-                pageinfo.PaginaAtual = 1;
+                paginacao.PaginaRequisicao.PaginaAtual = 1;
             }
-            if (pageinfo.ItensPorPagina == 0)
+            if (paginacao.PaginaRequisicao.ItensPorPagina == 0)
             {
-                pageinfo.ItensPorPagina = 10;
+                paginacao.PaginaRequisicao.ItensPorPagina = 10;
             }
 
 
-            int skip = (pageinfo.PaginaAtual - 1) * pageinfo.ItensPorPagina;
+            int skip = (paginacao.PaginaRequisicao.PaginaAtual - 1) * paginacao.PaginaRequisicao.ItensPorPagina;
 
             var produtos = new List<Produto>();
 
-            if (pageinfo.Filtros.FiltroId <= 0)
+            if (paginacao.FiltroId <= 0)
             {
-                produtos = await _context.Produtos                                
-                                .Where(x => x.Nome.Contains(pageinfo.Filtros.FiltroNome ?? ""))
-                                .OrderBy(p => p.Id)                                
+                produtos = await _context.Produtos
+                                .Where(x => x.Nome.Contains(paginacao.FiltroNome ?? ""))
+                                .OrderBy(p => p.Id)
                                 .ToListAsync();
             }
             else
@@ -73,21 +73,32 @@ namespace Backend.Controllers
             }
 
             int totalitens = produtos.Count();
-            int totalPaginas = totalitens / pageinfo.ItensPorPagina;
+            int totalPaginas = totalitens / paginacao.PaginaRequisicao.ItensPorPagina;
 
-            produtos = produtos.Skip(skip).Take(pageinfo.ItensPorPagina).ToList();
+            produtos = produtos.Skip(skip).Take(paginacao.PaginaRequisicao.ItensPorPagina).ToList();
 
-            return Ok(new
+            return Ok(new ResultadoBuscaProdutosModel
             {
-                Data = produtos,
-                Paginação = new
+                Paginacao = new ResultadoBuscaPaginadaModel
                 {
-                    PaginaAtual = pageinfo.PaginaAtual,
-                    TotalItems = totalitens,
+                    PaginaAtual = paginacao.PaginaRequisicao.PaginaAtual,
+                    TotalItens = totalitens,
                     TotalPaginas = totalPaginas
 
-                }
-            }); ;
+                },
+                Itens = produtos
+
+            }); 
+        }
+
+        [HttpPost]
+        [Route("SalvarProduto")]
+        public async Task<ActionResult<Produto>> PostProduto(Produto produto)
+        {
+            _context.Produtos.Add(produto);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetProduto), new { id = produto.Id }, produto);
         }
 
         // DELETE: api/Produtos/5
