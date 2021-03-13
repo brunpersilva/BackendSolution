@@ -19,50 +19,36 @@ namespace Backend.Controllers
         public ProdutosController(BackendContext context)
         {
             _context = context;
-        }
-
-        // GET: api/Produtos/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Produto>> GetProduto(int id)
-        {
-            var produto = await _context.Produtos.FindAsync(id);
-
-            if (produto == null)
-            {
-                return NotFound();
-            }
-
-            return produto;
-        }
+        }        
 
         // POST: api/Produtos
-        [HttpPost]
+        [HttpPost("Buscarprodutos")]
         public async Task<ActionResult> PostProduto(RequisicaoBuscaProdutosModel model)
         {
             //CHECK INICIAL 
-            if(model.FiltroId <= 0 && string.IsNullOrEmpty(model.FiltroNome))
+            if (model.FiltroId <= 0 && string.IsNullOrEmpty(model.FiltroNome))
             {
                 return BadRequest("Id e ou Nome invalidos");
             }
 
-            //SENAO VIER PREENCHIDO, SETAMOS O DEFAULT
-            if (model.PaginaRequisicao.PaginaAtual == 0)
+            //Caso PaginaAtual e ItensPorPagina venham vazio, setamos o default
+            if (model.Paginacao.PaginaAtual == 0)
             {
-                model.PaginaRequisicao.PaginaAtual = 1;
+                model.Paginacao.PaginaAtual = 1;
             }
-            if (model.PaginaRequisicao.ItensPorPagina == 0)
+            if (model.Paginacao.ItensPorPagina == 0)
             {
-                model.PaginaRequisicao.ItensPorPagina = 10;
+                model.Paginacao.ItensPorPagina = 10;
             }
 
             //Objeto que ira carregar a query
-            IQueryable<Produto> query = null;
+            IQueryable<ProdutoModel> query = null;
 
             //Setando query de acordo com FiltroId
             if (model.FiltroId > 0)
             {
                 query = _context.Produtos
-                                .Where(x => x.Id == model.FiltroId);                
+                                .Where(x => x.Id == model.FiltroId);
             }
 
             //Setando query de acordo FiltroNome
@@ -73,21 +59,21 @@ namespace Backend.Controllers
             }
 
             //Calculando quantos items se pula na query dependendo na quantidade de ItensPorPagina e PaginaAtual
-            int skip = (model.PaginaRequisicao.PaginaAtual - 1) * model.PaginaRequisicao.ItensPorPagina;
+            int skip = (model.Paginacao.PaginaAtual - 1) * model.Paginacao.ItensPorPagina;
 
             //resultado da query List<Produtos> sendo passado para itens
-            var itens = await query.Skip(skip).Take(model.PaginaRequisicao.ItensPorPagina).ToListAsync();
+            var itens = await query.Skip(skip).Take(model.Paginacao.ItensPorPagina).ToListAsync();
 
             //Calculando total de items na lista de produtos
             int totalItens = await query.CountAsync();
 
             //Calculo do numero de paginas que é obtido pela divisão do totalItens pelo numero de ItensPorPagina e arredondado para cima
-            int totalPaginas = Convert.ToInt32(Math.Ceiling((double)totalItens / model.PaginaRequisicao.ItensPorPagina));
+            int totalPaginas = Convert.ToInt32(Math.Ceiling((double)totalItens / model.Paginacao.ItensPorPagina));
 
             //Checando se a pagina solicitada é maior que o total de paginas calculado
-            if (model.PaginaRequisicao.PaginaAtual > totalPaginas)
+            if (model.Paginacao.PaginaAtual > totalPaginas)
             {
-                return BadRequest($"O numero total de paginas é {totalPaginas}, não é possivel retornar a pagina {model.PaginaRequisicao.PaginaAtual}");
+                return BadRequest($"O numero total de paginas é {totalPaginas}, não é possivel retornar a pagina {model.Paginacao.PaginaAtual}");
             }
 
             //Retornando Objeto ResultadoBuscaProdutosModel contendo a lista de produtos e dados de Paginação
@@ -95,19 +81,33 @@ namespace Backend.Controllers
             {
                 Paginacao = new ResultadoBuscaPaginadaModel
                 {
-                    PaginaAtual = model.PaginaRequisicao.PaginaAtual,
+                    PaginaAtual = model.Paginacao.PaginaAtual,
                     TotalItens = totalItens,
                     TotalPaginas = totalPaginas
                 },
 
                 Itens = itens
 
-            }); 
+            });
+        }
+
+        // GET: api/Produtos/5
+        [HttpGet("ObterProduto/{id}")]
+        public async Task<ActionResult<ProdutoModel>> GetProduto(int id)
+        {
+            var produto = await _context.Produtos.FindAsync(id);
+
+            if (produto == null)
+            {
+                return NotFound();
+            }
+
+            return produto;
         }
 
         [HttpPost]
         [Route("SalvarProduto")]
-        public async Task<ActionResult<Produto>> PostProduto(Produto produto)
+        public async Task<ActionResult<ProdutoModel>> PostProduto(ProdutoModel produto)
         {
             _context.Produtos.Add(produto);
             await _context.SaveChangesAsync();
@@ -116,13 +116,14 @@ namespace Backend.Controllers
         }
 
         // DELETE: api/Produtos/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Produto>> DeleteProduto(long id)
+
+        [HttpDelete("ExcluirProduto/{id}")]
+        public async Task<ActionResult<ProdutoModel>> DeleteProduto(int id)
         {
             var produto = await _context.Produtos.FindAsync(id);
             if (produto == null)
             {
-                return NotFound();
+                return NotFound($"Não existe produto com o id {id}");
             }
 
             _context.Produtos.Remove(produto);
@@ -130,11 +131,5 @@ namespace Backend.Controllers
 
             return produto;
         }
-
-        private bool ProdutoExists(int id)
-        {
-            return _context.Produtos.Any(e => e.Id == id);
-        }
-
     }
 }

@@ -6,6 +6,6 @@ namespace Backend.Models.PaginacaoModels
     public class ResultadoBuscaProdutosModel
     {
         public ResultadoBuscaPaginadaModel Paginacao { get; set; }
-        public List<Produto> Itens { get; set; } = new List<Produto>();
+        public List<ProdutoModel> Itens { get; set; } = new List<ProdutoModel>();
     }
 }

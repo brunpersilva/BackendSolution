@@ -8,6 +8,6 @@ namespace Backend.Models
            : base(options)
         {
         }
-        public DbSet<Produto> Produtos { get; set; }
+        public DbSet<ProdutoModel> Produtos { get; set; }
     }
 }
