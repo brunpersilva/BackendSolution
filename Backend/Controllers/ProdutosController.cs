@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Models;
@@ -25,7 +23,7 @@ namespace Backend.Controllers
         [HttpPost("Buscarprodutos")]
         public async Task<ActionResult> PostProduto(RequisicaoBuscaProdutosModel model)
         {
-            //CHECK INICIAL 
+            //Check Inicial dos filtros para garantir que nao se execute a query com ambos filtros nulos
             if (model.FiltroId <= 0 && string.IsNullOrEmpty(model.FiltroNome))
             {
                 return BadRequest("Id e ou Nome invalidos");
@@ -91,17 +89,19 @@ namespace Backend.Controllers
             });
         }
 
-        // GET: api/Produtos/5
         [HttpGet("ObterProduto/{id}")]
         public async Task<ActionResult<ProdutoModel>> GetProduto(int id)
         {
+            //Busca Produto no Banco pelo Id
             var produto = await _context.Produtos.FindAsync(id);
 
+            //Caso Produto não seja encontrado retorna not found
             if (produto == null)
             {
                 return NotFound();
             }
 
+            //retorna produto criado
             return produto;
         }
 
@@ -109,26 +109,34 @@ namespace Backend.Controllers
         [Route("SalvarProduto")]
         public async Task<ActionResult<ProdutoModel>> PostProduto(ProdutoModel produto)
         {
+            //Adciona produto a query
             _context.Produtos.Add(produto);
+
+            //Executa query salvado produto no banco
             await _context.SaveChangesAsync();
 
+            //Retorna GetProduto com o id do novo produto salvo no banco
             return CreatedAtAction(nameof(GetProduto), new { id = produto.Id }, produto);
         }
-
-        // DELETE: api/Produtos/5
 
         [HttpDelete("ExcluirProduto/{id}")]
         public async Task<ActionResult<ProdutoModel>> DeleteProduto(int id)
         {
+            //Busca Produto no Banco pelo Id
             var produto = await _context.Produtos.FindAsync(id);
+
+            //Caso Produto não seja encontrado retorna not found
             if (produto == null)
             {
                 return NotFound($"Não existe produto com o id {id}");
             }
-
+            //Prepara query para deleção do produto
             _context.Produtos.Remove(produto);
+
+            //Executa a query deletando o produto
             await _context.SaveChangesAsync();
 
+            //Retorna produto deletado
             return produto;
         }
     }
