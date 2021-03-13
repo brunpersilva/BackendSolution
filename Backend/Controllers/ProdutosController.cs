@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Models;
+using Backend.Models.PaginacaoModels;
 
 namespace Backend.Controllers
 {
@@ -19,14 +20,6 @@ namespace Backend.Controllers
         {
             _context = context;
         }
-
-        //// GET: api/Produtos
-        //[HttpGet]
-        //public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
-        //{
-        //    var output = await _context.Produtos.ToListAsync();
-        //    return output;
-        //}
 
         // GET: api/Produtos/5
         [HttpGet("{id}")]
@@ -44,49 +37,70 @@ namespace Backend.Controllers
 
         // POST: api/Produtos
         [HttpPost]
-        public async Task<ActionResult<IEnumerable<Produto>>> PostProduto(RequisicaoBuscaProdutosModel paginacao)
+        public async Task<ActionResult> PostProduto(RequisicaoBuscaProdutosModel model)
         {
-            if (paginacao.PaginaRequisicao.PaginaAtual == 0)
+            //CHECK INICIAL 
+            if(model.FiltroId <= 0 && string.IsNullOrEmpty(model.FiltroNome))
             {
-                paginacao.PaginaRequisicao.PaginaAtual = 1;
-            }
-            if (paginacao.PaginaRequisicao.ItensPorPagina == 0)
-            {
-                paginacao.PaginaRequisicao.ItensPorPagina = 10;
+                return BadRequest("Id e ou Nome invalidos");
             }
 
-
-            int skip = (paginacao.PaginaRequisicao.PaginaAtual - 1) * paginacao.PaginaRequisicao.ItensPorPagina;
-
-            var produtos = new List<Produto>();
-
-            if (paginacao.FiltroId <= 0)
+            //SENAO VIER PREENCHIDO, SETAMOS O DEFAULT
+            if (model.PaginaRequisicao.PaginaAtual == 0)
             {
-                produtos = await _context.Produtos
-                                .Where(x => x.Nome.Contains(paginacao.FiltroNome ?? ""))
-                                .OrderBy(p => p.Id)
-                                .ToListAsync();
+                model.PaginaRequisicao.PaginaAtual = 1;
             }
-            else
+            if (model.PaginaRequisicao.ItensPorPagina == 0)
             {
-                produtos = await _context.Produtos.ToListAsync();
+                model.PaginaRequisicao.ItensPorPagina = 10;
             }
 
-            int totalitens = produtos.Count();
-            int totalPaginas = totalitens / paginacao.PaginaRequisicao.ItensPorPagina;
+            //Objeto que ira carregar a query
+            IQueryable<Produto> query = null;
 
-            produtos = produtos.Skip(skip).Take(paginacao.PaginaRequisicao.ItensPorPagina).ToList();
+            //Setando query de acordo com FiltroId
+            if (model.FiltroId > 0)
+            {
+                query = _context.Produtos
+                                .Where(x => x.Id == model.FiltroId);                
+            }
 
+            //Setando query de acordo FiltroNome
+            if (!string.IsNullOrEmpty(model.FiltroNome) && model.FiltroId <= 0)
+            {
+                query = _context.Produtos
+                                .Where(x => x.Nome.Contains(model.FiltroNome ?? ""));
+            }
+
+            //Calculando quantos items se pula na query dependendo na quantidade de ItensPorPagina e PaginaAtual
+            int skip = (model.PaginaRequisicao.PaginaAtual - 1) * model.PaginaRequisicao.ItensPorPagina;
+
+            //resultado da query List<Produtos> sendo passado para itens
+            var itens = await query.Skip(skip).Take(model.PaginaRequisicao.ItensPorPagina).ToListAsync();
+
+            //Calculando total de items na lista de produtos
+            int totalItens = await query.CountAsync();
+
+            //Calculo do numero de paginas que é obtido pela divisão do totalItens pelo numero de ItensPorPagina e arredondado para cima
+            int totalPaginas = Convert.ToInt32(Math.Ceiling((double)totalItens / model.PaginaRequisicao.ItensPorPagina));
+
+            //Checando se a pagina solicitada é maior que o total de paginas calculado
+            if (model.PaginaRequisicao.PaginaAtual > totalPaginas)
+            {
+                return BadRequest($"O numero total de paginas é {totalPaginas}, não é possivel retornar a pagina {model.PaginaRequisicao.PaginaAtual}");
+            }
+
+            //Retornando Objeto ResultadoBuscaProdutosModel contendo a lista de produtos e dados de Paginação
             return Ok(new ResultadoBuscaProdutosModel
             {
                 Paginacao = new ResultadoBuscaPaginadaModel
                 {
-                    PaginaAtual = paginacao.PaginaRequisicao.PaginaAtual,
-                    TotalItens = totalitens,
+                    PaginaAtual = model.PaginaRequisicao.PaginaAtual,
+                    TotalItens = totalItens,
                     TotalPaginas = totalPaginas
-
                 },
-                Itens = produtos
+
+                Itens = itens
 
             }); 
         }
@@ -123,5 +137,4 @@ namespace Backend.Controllers
         }
 
     }
-
 }
